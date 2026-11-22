@@ -1,4 +1,9 @@
 import { defineConfig } from 'vite';
 import tailwind from '@tailwindcss/vite';
 
-export default defineConfig({ base: './', plugins: [tailwind()], esbuild: { jsx: 'automatic' } });
+export default defineConfig({
+  base: './',
+  plugins: [tailwind()],
+  resolve: { dedupe: ['@firebase/app'] },
+  esbuild: { jsx: 'automatic' },
+});
