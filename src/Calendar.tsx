@@ -91,26 +91,26 @@ export function Calendar({ data, lessons, date, now, create, edit, move }: Props
   const students = new Map(data.students.map(student => [student.id, student.name]));
   const lessonsOn = (day: string) => lessons.filter(item => item.date === day && item.end > start && item.start < end);
   return <>
-  <div className="mobile-week" aria-label="Ð Ð°ÑÐ¿Ð¸ÑÐ°Ð½Ð¸Ðµ Ð½Ð° Ð½ÐµÐ´ÐµÐ»ÑŽ">
+  <div className="mobile-week" aria-label="Расписание на неделю">
     {dates.map(day => {
       const dailyLessons = lessonsOn(day).sort((a, b) => a.start - b.start || a.end - b.end);
       return <section key={day} className={`mobile-day ${day === now.date ? 'current' : ''}`} aria-label={`${weekdays[weekday(day)]}, ${dateText(day)}`}>
         <header className="mobile-day-header">
           <div><h2>{weekdays[weekday(day)]}</h2><time dateTime={day}>{dateText(day)}</time></div>
-          <button className="free-button" aria-label={`Ð”Ð¾Ð±Ð°Ð²Ð¸Ñ‚ÑŒ Ð·Ð°Ð½ÑÑ‚Ð¸Ðµ Â· ${dateText(day)}`} onClick={() => create(day, start)}>ï¼‹ Ð—Ð°Ð½ÑÑ‚Ð¸Ðµ</button>
+          <button className="free-button" aria-label={`Добавить занятие · ${dateText(day)}`} onClick={() => create(day, start)}>＋ Занятие</button>
         </header>
         {dailyLessons.length ? <ul className="mobile-lessons">{dailyLessons.map(lesson =>
           <li key={lesson.id}><button className={`mobile-lesson ${lessonColor(lesson)}`} onClick={() => edit(lesson)}>
-            <span className="mobile-time">{time(lesson.start)}â€“{time(lesson.end)}</span>
+            <span className="mobile-time">{time(lesson.start)}–{time(lesson.end)}</span>
             <span className="mobile-lesson-info"><strong>{students.get(lesson.studentId)}</strong><span className="subject">{lesson.subject}</span><LessonStatus lesson={lesson} /></span>
           </button></li>
-        )}</ul> : <p className="mobile-empty">Ð—Ð°Ð½ÑÑ‚Ð¸Ð¹ Ð½ÐµÑ‚</p>}
+        )}</ul> : <p className="mobile-empty">Занятий нет</p>}
       </section>;
     })}
   </div>
-  <div ref={scroll} className="schedule" aria-label="Ð Ð°ÑÐ¿Ð¸ÑÐ°Ð½Ð¸Ðµ Ð·Ð°Ð½ÑÑ‚Ð¸Ð¹">
+  <div ref={scroll} className="schedule" aria-label="Расписание занятий">
     <div className="schedule-grid" style={{ gridTemplateColumns: `62px repeat(${dates.length}, minmax(102px, 1fr))` }}>
-      <div className="grid-head hours-head">Ð’Ñ€ÐµÐ¼Ñ</div>
+      <div className="grid-head hours-head">Время</div>
       {dates.map(day => <div key={day} className={'grid-head ' + (day === now.date ? 'current' : '')}>
         <span>{weekdays[weekday(day)]}</span><strong>{dateText(day)}</strong>
       </div>)}
@@ -119,22 +119,22 @@ export function Calendar({ data, lessons, date, now, create, edit, move }: Props
       </div>
       {dates.map(day => <div key={day} data-day={day} className={'day ' + (day === now.date ? 'current' : '')} style={{ height: (end - start) * scale }}>
         {slots.map((slot, i) => <button key={slot} className={'slot ' + (i % 2 ? 'half' : '')} style={{ height: Math.min(30, end - slot) * scale }}
-          aria-label={`Ð”Ð¾Ð±Ð°Ð²Ð¸Ñ‚ÑŒ Ð·Ð°Ð½ÑÑ‚Ð¸Ðµ Â· ${shortDays[weekday(day)]} ${dateText(day)} ${time(slot)}`} onClick={() => create(day, slot)} />)}
+          aria-label={`Добавить занятие · ${shortDays[weekday(day)]} ${dateText(day)} ${time(slot)}`} onClick={() => create(day, slot)} />)}
         {lanes(lessonsOn(day)).map(({ lesson, lane, width }) => {
           const name = students.get(lesson.studentId) ?? '';
-          const details = `${time(lesson.start)}â€“${time(lesson.end)} Â· ${name} Â· ${lesson.subject} Â· ${lesson.status} Â· ${lesson.paid ? 'ÐžÐ¿Ð»Ð°Ñ‡ÐµÐ½Ð¾' : 'ÐÐµ Ð¾Ð¿Ð»Ð°Ñ‡ÐµÐ½Ð¾'}`;
+          const details = `${time(lesson.start)}–${time(lesson.end)} · ${name} · ${lesson.subject} · ${lesson.status} · ${lesson.paid ? 'Оплачено' : 'Не оплачено'}`;
           return <div key={lesson.id} className={`lesson ${lessonColor(lesson)} ${preview?.id === lesson.id ? 'moving' : ''}`}
             style={{ top: (Math.max(lesson.start, start) - start) * scale, height: (Math.min(lesson.end, end) - Math.max(lesson.start, start)) * scale, left: `calc(${lane * width}% + 2px)`, width: `calc(${width}% - 4px)` }}
             onPointerMove={event => setPreview(target(event))} onPointerUp={finish} onPointerCancel={() => { gesture.current = null; setPreview(null); }}>
             <button className="lesson-body" aria-label={details} title={details} onPointerDown={event => begin(event, lesson)} onClick={() => { if (!suppressClick.current) edit(lesson); }}>
-              <span>{time(lesson.start)}â€“{time(lesson.end)}</span>
+              <span>{time(lesson.start)}–{time(lesson.end)}</span>
               <strong>{name}</strong><span className="subject">{lesson.subject}</span>
               <LessonStatus lesson={lesson} />
             </button>
-            {lesson.end <= end && <div className="resize" title="Ð˜Ð·Ð¼ÐµÐ½Ð¸Ñ‚ÑŒ Ð´Ð»Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð¾ÑÑ‚ÑŒ" onPointerDown={event => begin(event, lesson, true)} />}
+            {lesson.end <= end && <div className="resize" title="Изменить длительность" onPointerDown={event => begin(event, lesson, true)} />}
           </div>;
         })}
-        {preview?.date === day && <div className="drag-preview" style={{ top: (Math.max(preview.start, start) - start) * scale, height: (Math.min(preview.end, end) - Math.max(preview.start, start)) * scale }}>{time(preview.start)}â€“{time(preview.end)}</div>}
+        {preview?.date === day && <div className="drag-preview" style={{ top: (Math.max(preview.start, start) - start) * scale, height: (Math.min(preview.end, end) - Math.max(preview.start, start)) * scale }}>{time(preview.start)}–{time(preview.end)}</div>}
         {day === now.date && now.minute >= start && now.minute < end && <div className="now-line" style={{ top: (now.minute - start) * scale }} title={time(now.minute)} />}
       </div>)}
     </div>
@@ -143,13 +143,13 @@ export function Calendar({ data, lessons, date, now, create, edit, move }: Props
 }
 
 function lessonColor(lesson: Lesson) {
-  if (lesson.status === 'ÐžÑ‚Ð¼ÐµÐ½ÐµÐ½Ð¾') return 'lesson-cancelled';
-  if (lesson.status === 'ÐŸÑ€Ð¾Ð²ÐµÐ´ÐµÐ½Ð¾') return 'lesson-completed';
-  if (lesson.status === 'ÐŸÑ€Ð¾Ð¿ÑƒÑÐº') return 'lesson-occupied';
+  if (lesson.status === 'Отменено') return 'lesson-cancelled';
+  if (lesson.status === 'Проведено') return 'lesson-completed';
+  if (lesson.status === 'Пропуск') return 'lesson-occupied';
   return lesson.paid ? 'lesson-confirmed' : 'lesson-pending';
 }
 
 function LessonStatus({ lesson }: { lesson: Lesson }) {
-  const status = lesson.status === 'Ð—Ð°Ð¿Ð»Ð°Ð½Ð¸Ñ€Ð¾Ð²Ð°Ð½Ð¾' ? (lesson.paid ? 'ÐŸÐ¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´ÐµÐ½Ð¾' : 'ÐžÐ¶Ð¸Ð´Ð°ÐµÑ‚ Ð¾Ð¿Ð»Ð°Ñ‚Ñ‹') : lesson.status;
-  return <span className="lesson-state">{status}{(lesson.paid || lesson.status !== 'Ð—Ð°Ð¿Ð»Ð°Ð½Ð¸Ñ€Ð¾Ð²Ð°Ð½Ð¾') && <span className="payment">{lesson.paid ? 'ÐžÐ¿Ð»Ð°Ñ‡ÐµÐ½Ð¾' : 'ÐÐµ Ð¾Ð¿Ð»Ð°Ñ‡ÐµÐ½Ð¾'}</span>}</span>;
+  const status = lesson.status === 'Запланировано' ? (lesson.paid ? 'Подтверждено' : 'Ожидает оплаты') : lesson.status;
+  return <span className="lesson-state">{status}{(lesson.paid || lesson.status !== 'Запланировано') && <span className="payment">{lesson.paid ? 'Оплачено' : 'Не оплачено'}</span>}</span>;
 }
