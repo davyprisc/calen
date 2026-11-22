@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react';
-import { addDays, dateText, monday, shortDays, statuses, time, weekday, weekdays, type Data, type Lesson } from './model';
+import { addDays, dateText, monday, shortDays, time, weekday, weekdays, type Data, type Lesson } from './model';
 
 const scale = 1.3;
 
@@ -26,24 +26,23 @@ function lanes(lessons: Lesson[]) {
 
 type Gesture = { lesson: Lesson; resize: boolean; x: number; y: number; offset: number };
 type Props = {
-  data: Data; lessons: Lesson[]; date: string; daily: boolean; now: { date: string; minute: number };
+  data: Data; lessons: Lesson[]; date: string; now: { date: string; minute: number };
   create: (date: string, start: number) => void; edit: (lesson: Lesson) => void;
   move: (lesson: Lesson, next: Lesson, resize: boolean) => void;
 };
 
-export function Calendar({ data, lessons, date, daily, now, create, edit, move }: Props) {
+export function Calendar({ data, lessons, date, now, create, edit, move }: Props) {
   const { start, end, weekends } = data.settings;
   const week = monday(date);
-  const dates = daily ? [date] : Array.from({ length: weekends ? 7 : 5 }, (_, i) => addDays(week, i));
+  const dates = Array.from({ length: weekends ? 7 : 5 }, (_, i) => addDays(week, i));
   const slots = Array.from({ length: Math.ceil((end - start) / 30) }, (_, i) => start + i * 30);
   const scroll = useRef<HTMLDivElement>(null);
   const hasLessons = lessons.length > 0;
   useEffect(() => {
-    const firstVisible = daily ? date : week;
-    const lastVisible = daily ? date : addDays(week, weekends ? 6 : 4);
-    const earliest = Math.min(...lessons.filter(item => item.date >= firstVisible && item.date <= lastVisible && item.end > start && item.start < end).map(item => item.start));
+    const lastVisible = addDays(week, weekends ? 6 : 4);
+    const earliest = Math.min(...lessons.filter(item => item.date >= week && item.date <= lastVisible && item.end > start && item.start < end).map(item => item.start));
     if (scroll.current && Number.isFinite(earliest)) scroll.current.scrollTop = Math.max(0, (earliest - start - 60) * scale);
-  }, [daily, daily ? date : week, weekends, start, end, hasLessons]);
+  }, [week, weekends, start, end, hasLessons]);
   const gesture = useRef<Gesture | null>(null);
   const suppressClick = useRef(false);
   const [preview, setPreview] = useState<Lesson | null>(null);
@@ -89,9 +88,29 @@ export function Calendar({ data, lessons, date, daily, now, create, edit, move }
     if (next && (next.date !== active.lesson.date || next.start !== active.lesson.start || next.end !== active.lesson.end)) move(active.lesson, next, active.resize);
   }
 
-  return <div ref={scroll} className="schedule" aria-label="Расписание занятий">
-    <div className="schedule-grid" style={{ gridTemplateColumns: `62px repeat(${dates.length}, minmax(${daily ? 0 : 102}px, 1fr))` }}>
-      <div className="grid-head hours-head">Время</div>
+  const students = new Map(data.students.map(student => [student.id, student.name]));
+  const lessonsOn = (day: string) => lessons.filter(item => item.date === day && item.end > start && item.start < end);
+  return <>
+  <div className="mobile-week" aria-label="Ð Ð°ÑÐ¿Ð¸ÑÐ°Ð½Ð¸Ðµ Ð½Ð° Ð½ÐµÐ´ÐµÐ»ÑŽ">
+    {dates.map(day => {
+      const dailyLessons = lessonsOn(day).sort((a, b) => a.start - b.start || a.end - b.end);
+      return <section key={day} className={`mobile-day ${day === now.date ? 'current' : ''}`} aria-label={`${weekdays[weekday(day)]}, ${dateText(day)}`}>
+        <header className="mobile-day-header">
+          <div><h2>{weekdays[weekday(day)]}</h2><time dateTime={day}>{dateText(day)}</time></div>
+          <button className="free-button" aria-label={`Ð”Ð¾Ð±Ð°Ð²Ð¸Ñ‚ÑŒ Ð·Ð°Ð½ÑÑ‚Ð¸Ðµ Â· ${dateText(day)}`} onClick={() => create(day, start)}>ï¼‹ Ð—Ð°Ð½ÑÑ‚Ð¸Ðµ</button>
+        </header>
+        {dailyLessons.length ? <ul className="mobile-lessons">{dailyLessons.map(lesson =>
+          <li key={lesson.id}><button className={`mobile-lesson ${lessonColor(lesson)}`} onClick={() => edit(lesson)}>
+            <span className="mobile-time">{time(lesson.start)}â€“{time(lesson.end)}</span>
+            <span className="mobile-lesson-info"><strong>{students.get(lesson.studentId)}</strong><span className="subject">{lesson.subject}</span><LessonStatus lesson={lesson} /></span>
+          </button></li>
+        )}</ul> : <p className="mobile-empty">Ð—Ð°Ð½ÑÑ‚Ð¸Ð¹ Ð½ÐµÑ‚</p>}
+      </section>;
+    })}
+  </div>
+  <div ref={scroll} className="schedule" aria-label="Ð Ð°ÑÐ¿Ð¸ÑÐ°Ð½Ð¸Ðµ Ð·Ð°Ð½ÑÑ‚Ð¸Ð¹">
+    <div className="schedule-grid" style={{ gridTemplateColumns: `62px repeat(${dates.length}, minmax(102px, 1fr))` }}>
+      <div className="grid-head hours-head">Ð’Ñ€ÐµÐ¼Ñ</div>
       {dates.map(day => <div key={day} className={'grid-head ' + (day === now.date ? 'current' : '')}>
         <span>{weekdays[weekday(day)]}</span><strong>{dateText(day)}</strong>
       </div>)}
@@ -100,24 +119,37 @@ export function Calendar({ data, lessons, date, daily, now, create, edit, move }
       </div>
       {dates.map(day => <div key={day} data-day={day} className={'day ' + (day === now.date ? 'current' : '')} style={{ height: (end - start) * scale }}>
         {slots.map((slot, i) => <button key={slot} className={'slot ' + (i % 2 ? 'half' : '')} style={{ height: Math.min(30, end - slot) * scale }}
-          aria-label={`Добавить занятие · ${shortDays[weekday(day)]} ${dateText(day)} ${time(slot)}`} onClick={() => create(day, slot)} />)}
-        {lanes(lessons.filter(item => item.date === day && item.end > start && item.start < end)).map(({ lesson, lane, width }) => {
-          const name = data.students.find(student => student.id === lesson.studentId)?.name ?? '';
-          const details = `${time(lesson.start)}–${time(lesson.end)} · ${name} · ${lesson.subject} · ${lesson.status} · ${lesson.paid ? 'Оплачено' : 'Не оплачено'}`;
-          return <div key={lesson.id} className={`lesson status-${statuses.indexOf(lesson.status)} ${preview?.id === lesson.id ? 'moving' : ''}`}
+          aria-label={`Ð”Ð¾Ð±Ð°Ð²Ð¸Ñ‚ÑŒ Ð·Ð°Ð½ÑÑ‚Ð¸Ðµ Â· ${shortDays[weekday(day)]} ${dateText(day)} ${time(slot)}`} onClick={() => create(day, slot)} />)}
+        {lanes(lessonsOn(day)).map(({ lesson, lane, width }) => {
+          const name = students.get(lesson.studentId) ?? '';
+          const details = `${time(lesson.start)}â€“${time(lesson.end)} Â· ${name} Â· ${lesson.subject} Â· ${lesson.status} Â· ${lesson.paid ? 'ÐžÐ¿Ð»Ð°Ñ‡ÐµÐ½Ð¾' : 'ÐÐµ Ð¾Ð¿Ð»Ð°Ñ‡ÐµÐ½Ð¾'}`;
+          return <div key={lesson.id} className={`lesson ${lessonColor(lesson)} ${preview?.id === lesson.id ? 'moving' : ''}`}
             style={{ top: (Math.max(lesson.start, start) - start) * scale, height: (Math.min(lesson.end, end) - Math.max(lesson.start, start)) * scale, left: `calc(${lane * width}% + 2px)`, width: `calc(${width}% - 4px)` }}
             onPointerMove={event => setPreview(target(event))} onPointerUp={finish} onPointerCancel={() => { gesture.current = null; setPreview(null); }}>
             <button className="lesson-body" aria-label={details} title={details} onPointerDown={event => begin(event, lesson)} onClick={() => { if (!suppressClick.current) edit(lesson); }}>
-              <span>{time(lesson.start)}–{time(lesson.end)}</span>
+              <span>{time(lesson.start)}â€“{time(lesson.end)}</span>
               <strong>{name}</strong><span className="subject">{lesson.subject}</span>
-              <span className="lesson-state">● {lesson.status} <span className="payment">{lesson.paid ? 'Оплачено' : 'Не оплачено'}</span></span>
+              <LessonStatus lesson={lesson} />
             </button>
-            {lesson.end <= end && <div className="resize" title="Изменить длительность" onPointerDown={event => begin(event, lesson, true)} />}
+            {lesson.end <= end && <div className="resize" title="Ð˜Ð·Ð¼ÐµÐ½Ð¸Ñ‚ÑŒ Ð´Ð»Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð¾ÑÑ‚ÑŒ" onPointerDown={event => begin(event, lesson, true)} />}
           </div>;
         })}
-        {preview?.date === day && <div className="drag-preview" style={{ top: (Math.max(preview.start, start) - start) * scale, height: (Math.min(preview.end, end) - Math.max(preview.start, start)) * scale }}>{time(preview.start)}–{time(preview.end)}</div>}
+        {preview?.date === day && <div className="drag-preview" style={{ top: (Math.max(preview.start, start) - start) * scale, height: (Math.min(preview.end, end) - Math.max(preview.start, start)) * scale }}>{time(preview.start)}â€“{time(preview.end)}</div>}
         {day === now.date && now.minute >= start && now.minute < end && <div className="now-line" style={{ top: (now.minute - start) * scale }} title={time(now.minute)} />}
       </div>)}
     </div>
-  </div>;
+  </div>
+  </>;
+}
+
+function lessonColor(lesson: Lesson) {
+  if (lesson.status === 'ÐžÑ‚Ð¼ÐµÐ½ÐµÐ½Ð¾') return 'lesson-cancelled';
+  if (lesson.status === 'ÐŸÑ€Ð¾Ð²ÐµÐ´ÐµÐ½Ð¾') return 'lesson-completed';
+  if (lesson.status === 'ÐŸÑ€Ð¾Ð¿ÑƒÑÐº') return 'lesson-occupied';
+  return lesson.paid ? 'lesson-confirmed' : 'lesson-pending';
+}
+
+function LessonStatus({ lesson }: { lesson: Lesson }) {
+  const status = lesson.status === 'Ð—Ð°Ð¿Ð»Ð°Ð½Ð¸Ñ€Ð¾Ð²Ð°Ð½Ð¾' ? (lesson.paid ? 'ÐŸÐ¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´ÐµÐ½Ð¾' : 'ÐžÐ¶Ð¸Ð´Ð°ÐµÑ‚ Ð¾Ð¿Ð»Ð°Ñ‚Ñ‹') : lesson.status;
+  return <span className="lesson-state">{status}{(lesson.paid || lesson.status !== 'Ð—Ð°Ð¿Ð»Ð°Ð½Ð¸Ñ€Ð¾Ð²Ð°Ð½Ð¾') && <span className="payment">{lesson.paid ? 'ÐžÐ¿Ð»Ð°Ñ‡ÐµÐ½Ð¾' : 'ÐÐµ Ð¾Ð¿Ð»Ð°Ñ‡ÐµÐ½Ð¾'}</span>}</span>;
 }
