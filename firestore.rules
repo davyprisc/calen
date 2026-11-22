@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /schedules/{userId} {
+      function ownsSchedule() {
+        return request.auth != null
+          && request.auth.uid == 'REPLACE_WITH_OWNER_UID'
+          && request.auth.uid == userId;
+      }
+
+      function validSnapshot() {
+        return request.resource.data.keys().hasAll(['payload', 'revision'])
+          && request.resource.data.keys().hasOnly(['payload', 'revision'])
+          && request.resource.data.payload is string
+          && request.resource.data.payload.size() <= 960000
+          && request.resource.data.revision is int;
+      }
+
+      allow get: if ownsSchedule();
+      allow create: if ownsSchedule() && validSnapshot() && request.resource.data.revision == 1;
+      allow update: if ownsSchedule() && validSnapshot()
+        && request.resource.data.revision == resource.data.revision + 1;
+    }
+  }
+}
