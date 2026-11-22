@@ -112,7 +112,7 @@ export function StudentsForm({ students, currency, close, save }: { students: St
   </Modal>;
 }
 
-export function SettingsForm({ settings, close, save }: { settings: Settings; close: () => void; save: (settings: Settings) => void }) {
+export function SettingsForm({ settings, close, save, children }: { settings: Settings; children: ReactNode; close: () => void; save: (settings: Settings) => void }) {
   const [draft, setDraft] = useState(settings);
   const [error, setError] = useState('');
   return <Modal title="Настройки" close={close}>
@@ -136,5 +136,6 @@ export function SettingsForm({ settings, close, save }: { settings: Settings; cl
       {error && <p role="alert" className="error">{error}</p>}
       <footer className="actions"><button type="button" onClick={close}>Отмена</button><button className="primary">Сохранить</button></footer>
     </form>
+    {children}
   </Modal>;
 }
