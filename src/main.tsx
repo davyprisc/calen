@@ -244,8 +244,8 @@ function App({ cloud }: { cloud?: CloudStorage }) {
   return <main className="app">
     <Toolbar date={date} today={now.date} search={search} filter={filter} setDate={d => { if (d >= '1900-01-01' && d <= '2100-12-31') setDate(d); }} setSearch={setSearch} setFilter={setFilter}
       add={() => create(date, settings.start)} students={() => setPanel('students')} settings={() => setPanel('settings')} />
-    {cloud && <div className="calendar-meta flex flex-wrap items-center justify-between gap-2">
-      <span role="status">{saving ? 'Сохраняю в Firebase…' : refreshError ? 'Связь с Firebase прервана. Обновите расписание.' : 'Расписание синхронизируется через Firebase'}</span>
+    {cloud && <div className="calendar-meta flex flex-wrap items-center justify-end gap-2">
+      {(saving || refreshError) && <span role="status">{saving ? 'Сохраняю в Firebase…' : 'Связь с Firebase прервана. Обновите расписание.'}</span>}
       <div className="flex gap-2">
         <button disabled={saving} onClick={refreshManually}>Обновить</button>
         <button disabled={saving} onClick={() => cloud.signOut().catch(() => writeError('Не удалось выйти из аккаунта.'))}>Выйти</button>
